@@ -15,12 +15,14 @@ final class NameSparkViewModel {
         var hasPerformedSearch = false
         var results: [NameSearchResult] = []
         var errorMessage: String?
+        var startingLetterWarning: String?
     }
 
     weak var delegate: NameSparkViewModelDelegate?
     private(set) var state = State()
 
     private let apiClient: NameSparkAPIClientProtocol
+    private var searchTask: Task<Void, Never>?
 
     init(apiClient: NameSparkAPIClientProtocol) {
         self.apiClient = apiClient
@@ -60,11 +62,20 @@ final class NameSparkViewModel {
     }
 
     func updateStartingLetter(_ rawValue: String) {
-        state.startingLetter = rawValue
+        let trimmed = rawValue
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
             .prefix(1)
             .description
+
+        if let first = trimmed.first, first.isNumber {
+            // Reject the digit — keep the field empty and warn the user.
+            state.startingLetter = ""
+            state.startingLetterWarning = "Starting letter must be a letter, not a number."
+        } else {
+            state.startingLetter = trimmed
+            state.startingLetterWarning = nil
+        }
 
         delegate?.nameSparkViewModelDidUpdate(self)
     }
@@ -74,14 +85,42 @@ final class NameSparkViewModel {
         return state.results[indexPath.row]
     }
 
-    func findNames() {
-        // INTERVIEW TODO:
-        // Build a request from the selected filters, call the backend search
-        // route, and make loading/error/empty states explicit. This is also a
-        // good place to decide how you want to handle overlapping searches.
-        _ = apiClient
-        state.hasPerformedSearch = true
-        state.errorMessage = "Starter shell only. Implement the NameSpark search flow."
+    /// Propagates a favorite change from the detail screen back into the results list.
+    func updateFavorite(for id: String, isFavorite: Bool) {
+        guard let index = state.results.firstIndex(where: { $0.id == id }) else { return }
+        state.results[index].isFavorite = isFavorite
         delegate?.nameSparkViewModelDidUpdate(self)
+    }
+
+    func findNames() {
+        // Cancel any in-flight search so results never arrive out of order.
+        searchTask?.cancel()
+
+        let request = NameSparkSearchRequest(
+            gender: state.selectedGender,
+            origins: Array(state.selectedOrigins),
+            startingLetter: state.startingLetter.isEmpty ? nil : state.startingLetter,
+            limit: nil
+        )
+
+        state.isLoading = true
+        state.hasPerformedSearch = true
+        state.errorMessage = nil
+        delegate?.nameSparkViewModelDidUpdate(self)
+
+        searchTask = Task {
+            do {
+                let results = try await apiClient.search(request: request)
+                guard !Task.isCancelled else { return }
+                state.results = results
+                state.errorMessage = nil
+            } catch {
+                guard !Task.isCancelled else { return }
+                state.results = []
+                state.errorMessage = "Something went wrong. Please try again."
+            }
+            state.isLoading = false
+            delegate?.nameSparkViewModelDidUpdate(self)
+        }
     }
 }

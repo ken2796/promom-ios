@@ -36,7 +36,7 @@ final class NameDetailViewModel {
     }
 
     func toggleFavorite() {
-        guard state.detail != nil else {
+        guard let detail = state.detail else {
             state.errorMessage = "Load the name detail before saving."
             delegate?.nameDetailViewModelDidUpdate(self)
             return
@@ -47,9 +47,13 @@ final class NameDetailViewModel {
             state.errorMessage = nil
             delegate?.nameDetailViewModelDidUpdate(self)
 
-            // INTERVIEW TODO:
-            // Call the favorite mutation endpoint, update the current detail,
-            // and push the updated state back to the results screen.
+            do {
+                let updated = try await apiClient.updateFavorite(id: nameID, isFavorite: !detail.isFavorite)
+                state.detail = updated
+                onFavoriteUpdated?(updated)
+            } catch {
+                state.errorMessage = "Couldn't update favorite. Please try again."
+            }
 
             state.isSaving = false
             delegate?.nameDetailViewModelDidUpdate(self)
@@ -61,10 +65,12 @@ final class NameDetailViewModel {
         state.errorMessage = nil
         delegate?.nameDetailViewModelDidUpdate(self)
 
-        // INTERVIEW TODO:
-        // Fetch the name detail payload, surface failure clearly, and decide
-        // how you want the empty/detail states to behave while loading.
-        _ = apiClient
+        do {
+            let detail = try await apiClient.fetchDetail(id: nameID)
+            state.detail = detail
+        } catch {
+            state.errorMessage = "Couldn't load name details. Please go back and try again."
+        }
 
         state.isLoading = false
         delegate?.nameDetailViewModelDidUpdate(self)
