@@ -4,6 +4,7 @@ import UIKit
 final class AppCoordinator {
     private let navigationController: UINavigationController
     private let environment: AppEnvironment
+    private weak var searchViewModel: NameSparkViewModel?
 
     init(navigationController: UINavigationController, environment: AppEnvironment) {
         self.navigationController = navigationController
@@ -12,6 +13,7 @@ final class AppCoordinator {
 
     func start() {
         let viewModel = NameSparkViewModel(apiClient: environment.apiClient)
+        searchViewModel = viewModel
         let viewController = NameSparkViewController(viewModel: viewModel)
 
         viewController.onSelectResult = { [weak self] result in
@@ -27,11 +29,12 @@ final class AppCoordinator {
             seedName: result.name,
             apiClient: environment.apiClient
         )
-        let viewController = NameDetailViewController(viewModel: viewModel)
 
-        // INTERVIEW TODO:
-        // Once favorite mutations are implemented, decide how to propagate the
-        // updated state back into the results screen.
+        viewModel.onFavoriteUpdated = { [weak self] updated in
+            self?.searchViewModel?.updateFavorite(for: updated.id, isFavorite: updated.isFavorite)
+        }
+
+        let viewController = NameDetailViewController(viewModel: viewModel)
         navigationController.pushViewController(viewController, animated: true)
     }
 }

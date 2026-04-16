@@ -42,7 +42,7 @@ struct NameSearchResult: Codable, Hashable {
     let gender: NameGender
     let origin: NameOrigin
     let matchScore: Int
-    let isFavorite: Bool
+    var isFavorite: Bool
 
     var metadataLine: String {
         "\(origin.displayTitle) • \(gender.displayTitle)"

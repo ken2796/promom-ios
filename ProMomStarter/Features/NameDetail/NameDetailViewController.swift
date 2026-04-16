@@ -148,16 +148,19 @@ final class NameDetailViewController: UIViewController {
     }
 
     private func render() {
-        // INTERVIEW TODO:
-        // Tighten the loading, error, and favorite-button behavior here. The
-        // starter intentionally leaves the detail UX unfinished.
-        if viewModel.state.isLoading || viewModel.state.isSaving {
+        let state = viewModel.state
+
+        if state.isLoading || state.isSaving {
             loadingIndicator.startAnimating()
         } else {
             loadingIndicator.stopAnimating()
         }
 
-        if let detail = viewModel.state.detail {
+        // Hide the card while the initial load is in flight so we never show
+        // stale placeholder text. Once detail arrives it stays visible.
+        scrollView.isHidden = state.detail == nil && state.isLoading
+
+        if let detail = state.detail {
             title = detail.name
             nameLabel.text = detail.name
             genderLabel.text = detail.gender.displayTitle
@@ -166,20 +169,21 @@ final class NameDetailViewController: UIViewController {
             stylesLabel.text = detail.stylesLine
             popularityLabel.text = detail.popularity
             insightLabel.text = detail.insight
-            favoriteButton.setPromomTitle(detail.isFavorite ? "Saved to favorites" : "Save to favorites")
-        } else {
-            genderLabel.text = nil
-            originLabel.text = nil
+
+            let isFavorite = detail.isFavorite
+            favoriteButton.setPromomTitle(isFavorite ? "Saved to favorites" : "Save to favorites")
+            favoriteButton.applyPromomButtonStyle(isFavorite ? .primary : .secondary)
         }
 
-        if let errorMessage = viewModel.state.errorMessage {
+        if let errorMessage = state.errorMessage {
             messageView.show(message: errorMessage, tintColor: ProMomColor.warning)
         } else {
             messageView.hide()
         }
 
-        favoriteButton.isEnabled = !viewModel.state.isSaving
-        favoriteButton.alpha = viewModel.state.isSaving ? 0.6 : 1
+        let canInteract = state.detail != nil && !state.isSaving
+        favoriteButton.isEnabled = canInteract
+        favoriteButton.alpha = canInteract ? 1 : 0.6
     }
 }
 

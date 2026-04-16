@@ -19,6 +19,7 @@ final class NameSparkViewController: UIViewController {
     private let originRowsStack = UIStackView()
     private let startingLetterLabel = UILabel()
     private let startingLetterField = UITextField()
+    private let startingLetterWarningLabel = UILabel()
     private let findButton = UIButton(type: .system)
     private let resultsLabel = UILabel()
     private let messageView = MessageView()
@@ -77,7 +78,7 @@ final class NameSparkViewController: UIViewController {
         heroLabel.setPromomText("Find names for your shortlist.", style: .heroTitle, numberOfLines: 0)
 
         subtitleLabel.setPromomText(
-            "Search, detail, and favorite are intentionally unfinished.",
+            "Pick filters and tap Find names to discover name ideas.",
             style: .smallBody,
             color: ProMomColor.textSecondary,
             numberOfLines: 0
@@ -136,6 +137,9 @@ final class NameSparkViewController: UIViewController {
         startingLetterField.applyPromomInputStyle(placeholder: "A")
         startingLetterField.addTarget(self, action: #selector(startingLetterChanged), for: .editingChanged)
 
+        startingLetterWarningLabel.setPromomText(nil, style: .caption, color: ProMomColor.warning, numberOfLines: 0)
+        startingLetterWarningLabel.isHidden = true
+
         findButton.applyPromomButtonStyle(.primary)
         findButton.setPromomTitle("Find names")
         findButton.addTarget(self, action: #selector(findTapped), for: .touchUpInside)
@@ -165,6 +169,7 @@ final class NameSparkViewController: UIViewController {
             originRowsStack,
             startingLetterLabel,
             startingLetterField,
+            startingLetterWarningLabel,
             findButton,
         ].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
 
@@ -178,6 +183,7 @@ final class NameSparkViewController: UIViewController {
             originRowsStack,
             startingLetterLabel,
             startingLetterField,
+            startingLetterWarningLabel,
             findButton,
         ])
         filterStack.translatesAutoresizingMaskIntoConstraints = false
@@ -285,6 +291,14 @@ final class NameSparkViewController: UIViewController {
         }
 
         startingLetterField.text = viewModel.state.startingLetter
+
+        if let warning = viewModel.state.startingLetterWarning {
+            startingLetterWarningLabel.text = warning
+            startingLetterWarningLabel.isHidden = false
+        } else {
+            startingLetterWarningLabel.isHidden = true
+        }
+
         findButton.isEnabled = viewModel.isFindButtonEnabled
         findButton.alpha = viewModel.isFindButtonEnabled ? 1 : 0.55
 
